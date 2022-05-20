@@ -1,0 +1,153 @@
+WiFi via een Cisco Access Point 
+WiFi voor gasten en medewerkers configureren. Gasten en medewerkers hebben beide een eigen
+WiFi SSID nodig. 
+Medewerkers kunnen verbinding maken met een WiFi SSID dat toegang geeft tot alle 
+servers in het netwerk. 
+Gasten mogen alleen toegang tot het internet en GEEN toegang tot het netwerk.
+__________________________________________________________________________________________
+Stap 1. 
+
+- Configureer 2 extra VLAN's op de switch, 1 voor medewerkers, 1 voor gasten. 
+
+Commands:
+# vlan [nummer]
+# name [vlan naam]
+# end
+
+# interface range Gi of Fa1/0/*-*
+# switchport mode access
+# switchport access vlan [nummer]
+# end
+___________________________________________________________________________________________
+Stap 2. 
+
+- Verbind de access-point op een poort (handig is 21) op de switch.
+
+- Configureer de Access point
+
+Configuratie verbinding SSID/VLAN (VLAN-TAG):
+Commands:
+
+ap# Enable
+ap# Conf t
+ap(config)#Dot11 ssid [SSID_NAAM_1]
+ap(config-ssid)# vlan [ID_1]
+ap(config-ssid)# authentication open
+ap(config-ssid)# authentication key-management wpa version 2
+ap(config-ssid)# wpa-psk ascii ciscopassword
+ap(config-ssid)# mbssid Guest-mode
+ap(config-ssid)# End
+ap(config)#  	
+ap(config)#Dot11 ssid [SSID_NAAM_2]
+ap(config-ssid)# vlan [ID_2]
+ap(config-ssid)# authentication open
+ap(config-ssid)# authentication key-management wpa version 2
+ap(config-ssid)# wpa-psk ascii ciscopassword
+ap(config-ssid)# mbssid Guest-mode
+ap(config-ssid)# End
+ap(config)#  	
+
+Configuratie encryptie SSID/VLAN:
+Commands:
+AP#conf t
+AP(config)# int dot11 0
+AP(config-if)# mbssid
+AP(config-if)# encryption vlan [ID_1] mode ciphers aes-ccm
+AP(config-if)# encryption vlan [ID_2] mode ciphers aes-ccm
+AP(config-if)# ssid [SSID_NAAM_1]
+AP(config-if)# ssid [SSID_NAAM_2]
+AP(config-if)# no shut
+
+
+Configuratie sub interfaces 2.4 GHZ radio en Ethernet:
+Commands:
+AP# configure terminal
+Enter configuration commands, one per line.  End with CNTL/Z.
+AP(config)# interface dot11Radio0.[vlan_ID_1]
+AP(config-subif)# encapsulation dot1Q [vlan_ID_1]
+AP(config-subif)# bridge-group [vlan_ID_1]
+AP(config-subif)# interface gigabitethernet0.[vlan_ID_1]
+AP(config-subif)# bridge-group [vlan_ID_1] 
+AP(config-subif)# encapsulation dot1Q [vlan_ID_1]
+AP(config-subif)# end
+AP# write memory
+AP(config)# interface dot11Radio0.[vlan_ID_2]
+AP(config-subif)# encapsulation dot1Q [vlan_ID_2]
+AP(config-subif)# bridge-group [vlan_ID_2]
+AP(config-subif)# interface fastethernet0.[vlan_ID_2]
+AP(config-subif)# bridge-group [vlan_ID_2]
+AP(config-subif)# encapsulation dot1Q [vlan_ID_2]
+AP(config-subif)# end
+AP# write memory
+________________________________________________________________________________________
+Stap 3. 
+
+- Configureer de switch verder, zodat alles getrunked wordt.
+
+Commands:
+ST_SW_01> enable
+ST_SW_01# conf t
+copST_SW_01(config)#int fa1/0/21
+ST_SW_01(config-if)# switchport trunk allowed vlan 20,25 (voorbeeld)
+ST_SW_01(config-if)# switchport trunk encapsulation dot1q 
+ST_SW_01(config-if)# switchport mode trunk
+ST_SW_01(config-if)# switchport trunk native vlan 99
+end
+
+Note: 
+Om het te laten werken moet er dubbel getrunked worden!
+Getrunked naar de switch en de router.
+
+# conf t
+# int gi1/0/22
+# switchport trunk allow vlan add 20
+# switchport trunk allow vlan add 25
+# switchport trunk encapsulation dot1q
+# switchport mode trunk
+# switchport trunk native vlan 99 ??????????
+end
+
+Beheren interface commands:
+ap> enable
+ap# Conf t
+ap# Int bvi 1
+ap(config-if)#	ip address 10.10.99.252 255.255.255.0
+ap(config-if)#	no shut
+ap(config-if)#	end
+_________________________________________________________________________________________
+Stap 4. 
+
+- Configureer de interfaces van de WiFi VLAN's op de Router of Fortigate.
+Zorg ervoor dat de WiFi netwerken een gateway krijgen. Logische IP-subnet.
+
+- Configureer het hoogste IP adres van het subnet op beide VLAN-interfaces!!!!!!!!!!!!
+________________________________________________________________________________________
+Stap 5. 
+
+- Configureer NAT voor de WiFi VLAN's.
+________________________________________________________________________________________
+Stap 6.
+
+- Configureer een DHCP-scope op de Windows Server. Een voor medewerkers en een voor 
+gasten. 
+_______________________________________________________________________________________
+
+Belangrijk is om te denken om beveiliging.
+Gasten > DNS naar buiten 
+Medewerkers > DNS server
+
+
+Overige commands:
+ap# show run
+ap# ping [ip of gateway] 
+
+ap# show dot11 associations
+802.11 Client Stations on Dot11Radio0:
+SSID [one] :
+SSID [two] :
+
+
+
+
+
+
